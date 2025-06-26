@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Points des Clubs</title>
+</head>
+<body>
+    <h1>Liste des clubs et leurs points</h1>
+    <table border="1" cellpadding="10">
+        <thead>
+            <tr>
+                <th>Nom du club</th>
+                <th>Points actuels</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for club in clubs %}
+            <tr>
+                <td>{{ club['name'] }}</td>
+                <td>{{ club['points'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <a href="{{ url_for('index') }}">Retour à l'accueil</a>
+</body>
+</html>

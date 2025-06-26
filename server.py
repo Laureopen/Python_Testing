@@ -70,9 +70,9 @@ def purchasePlaces():
     club["points"] = int(club["points"]) - placesRequired
     return render_template('welcome.html', club=club, competitions=competitions)
 
-
-# TODO: Add route for points display
-
+@app.route('/clubsPoints',methods=['GET'])
+def display_clubs_points():
+    return render_template('clubs_points.html', clubs=clubs)
 
 @app.route('/logout')
 def logout():
