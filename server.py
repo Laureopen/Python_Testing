@@ -53,6 +53,9 @@ def purchasePlaces():
     if datetime.strptime(competition['date'], "%Y-%m-%d %H:%M:%S") < datetime.now():
         flash("You cannot book place in past competition")
         return render_template('welcome.html', club=club, competitions=competitions)
+    if placesRequired > int(club["points"]):
+        flash("you can not book more than available points")
+        return render_template('welcome.html', club=club, competitions=competitions)
     competition['numberOfPlaces'] = int(competition['numberOfPlaces']) - placesRequired
     flash('Great-booking complete!')
     club["points"] = int(club["points"]) - placesRequired
