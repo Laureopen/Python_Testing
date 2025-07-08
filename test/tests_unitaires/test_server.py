@@ -127,7 +127,26 @@ def test_showSummary_email_not_found(client):
     html = response.data.decode('utf-8')
     assert "Désolé, cette adresse e-mail est introuvable." in html
 
+def test_display_clubs_points(client, monkeypatch):
+    test_clubs = [
+        {"name": "Club Alpha", "email": "alpha@club.com", "points": "20"},
+        {"name": "Club Beta", "email": "beta@club.com", "points": "15"}
+    ]
 
+    # Patch les données clubs dans le module server
+    monkeypatch.setattr("server.clubs", test_clubs)
+
+    # Appel GET de la route
+    response = client.get('/clubsPoints')
+
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    # Vérifie que les noms et points sont affichés dans la page
+    assert "Club Alpha" in html
+    assert "20" in html
+    assert "Club Beta" in html
+    assert "15" in html
 
 
 
