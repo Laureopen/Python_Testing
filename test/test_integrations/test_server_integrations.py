@@ -1,6 +1,6 @@
 import pytest
 from server import app
-
+import urllib.parse
 
 @pytest.fixture
 def client():
@@ -31,16 +31,12 @@ def test_show_summary_invalid_email(client):
     assert b"cette adresse e-mail est introuvable." in response.data
 
 
-
-import urllib.parse
-
 def test_book_route(client):
     competition_name = urllib.parse.quote("Fall Classic")
     club_name = urllib.parse.quote("She Lifts")
 
     response = client.get(f'/book/{competition_name}/{club_name}')
     assert response.status_code == 200
-
 
 
 def test_purchase_places(client):
