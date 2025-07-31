@@ -1,3 +1,7 @@
+<!--Réservation de places pour une compétition (GUDLFT)
+    Ce template affiche les détails d'une compétition et permet à un club
+    de réserver des places dans la limite autorisée.
+    -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,6 +15,11 @@
         <input type="hidden" name="club" value="{{club['name']}}">
         <input type="hidden" name="competition" value="{{competition['name']}}">
         <label for="places">How many places?</label>
+         <!--
+            Champ de saisie : nombre de places à réserver
+            - min = 0 : empêche la réservation négative
+            - max = limité à 12, ou au nombre de points du club (selon ses points disponibles)
+        -->
         <input type="number" min="0" max="{{ 12 if club['points']|int> 12 else club['points']|int+1}}" name="places"/>
         <button type="submit">Book</button>
     </form>

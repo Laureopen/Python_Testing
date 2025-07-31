@@ -1,3 +1,7 @@
+<!--
+    Page HTML : Portail de connexion GUDLFT
+    Cette page permet à un club de se connecter via son email (secrétaire).
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +10,10 @@
 </head>
 <body>
     <h1>Welcome to the GUDLFT Registration Portal!</h1>
-
+    <!--
+        Bloc Jinja pour afficher les messages flash (par exemple, erreurs de connexion)
+        Si des messages existent, ils seront listés dans une balise <ul>
+    -->
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <ul>
@@ -17,7 +24,9 @@
       {% endif %}
     {% endwith %}
 
+<!-- Texte d'instruction pour l'utilisateur -->
     Please enter your secretary email to continue:
+    <!-- Formulaire de connexion : envoie l'email à la route "showSummary" -->
     <form action="showSummary" method="post">
         <label for="email">Email:</label>
         <input type="email" name="email" id=""/>
