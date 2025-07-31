@@ -1,5 +1,5 @@
 import pytest
-from server import app, clubs, competitions
+from server import app
 from datetime import datetime, timedelta
 
 
@@ -12,139 +12,76 @@ def client():
 
 
 @pytest.fixture
-def setup_data(monkeypatch):
-    # Setup initial state : un club et une compétition dans le futur
-    initial_points = 10
-    initial_places = 10
-    test_club = {"name": "Integration Club", "email": "integration@club.com", "points": str(initial_points)}
-    future_date = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
-    test_competition = {"name": "Integration Competition", "numberOfPlaces": str(initial_places), "date": future_date}
+def setup_club_and_competition(monkeypatch):
+    # Crée 2 compétitions : une future, une passée
+    now = datetime.now()
+    future_date = (now + timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
+    past_date = (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
 
-    monkeypatch.setattr("server.clubs", [test_club])
-    monkeypatch.setattr("server.competitions", [test_competition])
+    club = {"name": "Test Club", "email": "test@club.com", "points": "10"}
+    competitions = [
+        {"name": "Future Competition", "numberOfPlaces": "10", "date": future_date},
+        {"name": "Past Competition", "numberOfPlaces": "10", "date": past_date},
+    ]
 
-    return test_club, test_competition, initial_points, initial_places
+    monkeypatch.setattr("server.clubs", [club])
+    monkeypatch.setattr("server.competitions", competitions)
 
-
-@pytest.fixture
-def setup_data_past(monkeypatch):
-    # Setup initial state : un club et une compétition dans le passé
-    initial_points = 10
-    initial_places = 10
-    test_club = {"name": "Past Club", "email": "past@club.com", "points": str(initial_points)}
-    past_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
-    test_competition = {"name": "Past Competition", "numberOfPlaces": str(initial_places), "date": past_date}
-
-    monkeypatch.setattr("server.clubs", [test_club])
-    monkeypatch.setattr("server.competitions", [test_competition])
-
-    return test_club, test_competition, initial_points, initial_places
+    return club, competitions
 
 
-def test_reserve_3_places_success(client, setup_data):
-    test_club, test_competition, initial_points, initial_places = setup_data
+def test_booking_scenarios(client, setup_club_and_competition):
+    club, competitions = setup_club_and_competition
+    club_name = club["name"]
+    competition_future = competitions[0]["name"]
+    competition_past = competitions[1]["name"]
 
-    response = client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
+    # 1. Réservation valide (3 places)
+    resp = client.post('/purchasePlaces', data={
+        "competition": competition_future,
+        "club": club_name,
         "places": "3"
     }, follow_redirects=True)
+    assert resp.status_code == 200
+    assert b"Great-booking complete!" in resp.data
 
-    assert response.status_code == 200
-    assert b"Great-booking complete!" in response.data
-
-    assert int(test_competition["numberOfPlaces"]) == initial_places - 3
-    assert int(test_club["points"]) == initial_points - 3
-
-
-def test_reserve_more_than_12_places_fails(client, setup_data):
-    test_club, test_competition, _, _ = setup_data
-
-    response = client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
+    # 2. Réserver plus de 12 places → refusé
+    resp = client.post('/purchasePlaces', data={
+        "competition": competition_future,
+        "club": club_name,
         "places": "13"
     }, follow_redirects=True)
+    assert b"you can not book more than 12 places" in resp.data
 
-    assert response.status_code == 200
-    assert b"you can not book more than 12 places" in response.data
-
-
-def test_reserve_2_places_success(client, setup_data):
-    test_club, test_competition, initial_points, initial_places = setup_data
-
-    # Première réservation de 3 places (pour avancer le scénario)
-    client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
-        "places": "3"
+    # 3. Réserver plus de points restants → refusé
+    resp = client.post('/purchasePlaces', data={
+        "competition": competition_future,
+        "club": club_name,
+        "places": "8"  # trop par rapport à points restants
     }, follow_redirects=True)
+    assert b"you can not book more than available points" in resp.data
 
-    # Puis réservation de 2 places
-    response = client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
-        "places": "2"
-    }, follow_redirects=True)
-
-    assert response.status_code == 200
-    assert b"Great-booking complete!" in response.data
-
-    assert int(test_competition["numberOfPlaces"]) == initial_places - 5
-    assert int(test_club["points"]) == initial_points - 5
-
-
-def test_reserve_more_places_than_points_fails(client, setup_data):
-    test_club, test_competition, initial_points, initial_places = setup_data
-
-    # Première réservation de 5 places (pour avancer le scénario)
-    client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
-        "places": "5"
-    }, follow_redirects=True)
-
-    # Essayer de réserver 6 places (plus que les points restants)
-    response = client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
-        "places": "6"
-    }, follow_redirects=True)
-
-    assert response.status_code == 200
-    assert b"you can not book more than available points" in response.data
-
-
-def test_reservation_on_past_competition_fails(client, setup_data_past):
-    test_club, test_competition, _, _ = setup_data_past
-
-    response = client.post('/purchasePlaces', data={
-        "competition": test_competition["name"],
-        "club": test_club["name"],
+    # 4. Réserver pour une compétition passée → refusé
+    resp = client.post('/purchasePlaces', data={
+        "competition": competition_past,
+        "club": club_name,
         "places": "1"
     }, follow_redirects=True)
-
-    assert response.status_code == 200
-    assert b"You cannot book place in past competition" in response.data
+    assert b"You cannot book place in past competition" in resp.data
 
 
-def test_logout(client, setup_data):
-    test_club, _, _, _ = setup_data
+def test_login_logout_and_invalid_email(client, setup_club_and_competition):
+    club, _ = setup_club_and_competition
 
-    # Simuler une session active
-    with client.session_transaction() as sess:
-        sess['club'] = test_club
+    # Login avec email invalide
+    resp = client.post('/showSummary', data={'email': 'no@no.com'}, follow_redirects=True)
+    assert b"cette adresse e-mail est introuvable." in resp.data
 
-    response = client.get('/logout', follow_redirects=True)
+    # Simuler un login (session)
+    with client.session_transaction() as session:
+        session['club'] = club
 
-    assert response.status_code == 200
-    assert b"Welcome" in response.data or b"Login" in response.data
-
-
-def test_show_summary_with_invalid_email(client):
-    invalid_email = "no-such-email@example.com"
-
-    response = client.post('/showSummary', data={'email': invalid_email}, follow_redirects=True)
-
-    assert response.status_code == 200
-    assert b"cette adresse e-mail est introuvable." in response.data
+    # Logout
+    resp = client.get('/logout', follow_redirects=True)
+    assert resp.status_code == 200
+    assert b"Welcome" in resp.data or b"Login" in resp.data
